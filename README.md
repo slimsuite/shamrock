@@ -73,10 +73,4 @@ SHAMROCK is a rather contrived acronym, as the inspirational species for its dev
 [genome of the Irish Shamrock](https://pmc.ncbi.nlm.nih.gov/articles/PMC11384199/), _Trifolium dubium_.
 Suggestions for a better expansion of the acronym are welcome!
 
-### Development plan
-
-- make an install packages script to install R libraries
-- make the shamrock.R script with the chromsyn template and read in the basefile and colour palette = 
-
-
 
