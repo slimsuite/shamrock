@@ -1,2 +1,82 @@
-# shamrock
-SHAMROCK: Splitting Homeologue Ancestors by Mapping Repeats with Overlapping Common Kmers
+# SHAMROCK: Splitting Homeologue Ancestors by Mapping Repeats with Overlapping Common Kmers
+
+kmer-based separation of allotetraploid parental subgenomes.
+
+## Introduction
+
+SHAMROCK is a kmer-based tool for disentangling homeologous chromosomes in allotetraploid genomes by subtracting shared sequence content, 
+identifying "allokmers" unique to each homoelogue, and clustering chromosomes into subgenomes based on shared allokmer content.
+
+
+## Setup
+
+To run SHAMROCK, you will need to have [KMC](https://github.com/refresh-bio/KMC) and R installed.
+R will need the `tidyverse` and `r-markdown` libraries. These can be set up easily in a conda environment.
+
+```
+conda create -n kmc 
+conda activate kmc
+mamba install -c conda-forge -c bioconda kmc r-base r-tidyverse r-rmarkdown
+```
+
+(If you don't use `mamba`, then replace the last command with `conda`.)
+
+To run the examples, or to use [Telociraptor](https://github.com/slimsuite/telociraptor) for formatting input, you will also want to have
+python3 on your system, and clone the [Telociraptor](https://github.com/slimsuite/telociraptor) repo next to the 
+[SHAMROCK](https://github.com/slimsuite/shamrock) repo.
+
+```
+# ├── shamrock/
+# └── telociraptor/
+```
+
+## Running SHAMROCK
+
+SHAMROCK is designed to run as a simple shell script on an input assembly in fasta format:
+
+```
+./shamrock/shamrock.sh <FASTA>
+```
+
+### Input format
+
+The assembly should be in fasta format with a **single line per sequence** and the names of chromosomes starting `chrXX`,
+where `XX` is a number from `1` to `N`. [Telociraptor](https://github.com/slimsuite/telociraptor) can be used to generate this format (see `get_examples.sh`).
+
+### Primary outputs
+
+The main outputs are a PDF of the clustering, along with two fasta files representing the parental partitioning.
+
+## Example
+
+Partitioning of the [Shamrock genome](https://pmc.ncbi.nlm.nih.gov/articles/PMC11384199/), _Trifolium dubium_:
+
+![Shamrock partitioning](example/drTriDubi3.shamrock.png)
+
+Parent 1: chr01, chr02, chr03, chr04, chr07, chr08, chr10.
+
+Parent 2: chr05, chr06, chr09, chr11, chr12, chr13, chr14, chr15.
+
+
+## Citation
+
+SHAMROCK has not yet been published. In the meantime, please cite this GitHub if you find it useful.
+
+## Future Plans
+
+SHAMROCK is a work in progress. Please post questions/requests as GitHub issues. One likely issue is where part of one chromosome has translocated to another 
+chromosome since the ploidy event. A future
+
+### A note on the name
+
+SHAMROCK is a rather contrived acronym, as the inspirational species for its development was the 
+[genome of the Irish Shamrock](https://pmc.ncbi.nlm.nih.gov/articles/PMC11384199/), _Trifolium dubium_.
+Suggestions for a better expansion of the acronym are welcome!
+
+### Development plan
+
+- make an install packages script to install R libraries
+- make the shamrock.R script with the chromsyn template and read in the basefile and colour palette = 
+
+
+
