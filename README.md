@@ -1,3 +1,5 @@
+<img src="shamrock-logo.png" align="right" width="200" style="margin-left: 15px;">
+
 # SHAMROCK: Splitting Homeologue Ancestors by Mapping Repeats with Overlapping Common Kmers
 
 kmer-based separation of allotetraploid parental subgenomes.
@@ -42,6 +44,18 @@ SHAMROCK is designed to run as a simple shell script on an input assembly in fas
 
 The assembly should be in fasta format with a **single line per sequence** and the names of chromosomes starting `chrXX`,
 where `XX` is a number from `1` to `N`. [Telociraptor](https://github.com/slimsuite/telociraptor) can be used to generate this format (see `get_examples.sh`).
+
+```
+>chr1 OX638062 ENA|OX638062|OX638062.1 Trifolium dubium genome assembly, chromosome: 1
+CCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCT...
+>chr2 OX638063 ENA|OX638063|OX638063.1 Trifolium dubium genome assembly, chromosome: 2
+GTGAGTGTGTTTTATAGAATTAGTTTGGATAAACTTTTGAGCAAACACACCAAAAGAAAA...
+>chr3 OX638064 ENA|OX638064|OX638064.1 Trifolium dubium genome assembly, chromosome: 3
+TAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAA...
+>chr4 OX638065 ENA|OX638065|OX638065.1 Trifolium dubium genome assembly, chromosome: 4
+ACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCCTAAACCCTAAACCCTAAACC...
+...
+```
 
 ### Primary outputs
 
