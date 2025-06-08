@@ -18,6 +18,7 @@
 # [ ] : Separate out the preflight checks into preflight.exec so it can be run separately.
 # [ ] : Concatenate the parents into two files.
 # [ ] : Consider running Compleasm and ChromSyn on the two sets of parents.
+# [ ] : Add a check that the sequences are actually found, i.e. the formatting is correct.
 
 ####################################### ::: SETUP ::: ##############################################
 

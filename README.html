@@ -393,17 +393,24 @@ assembly in fasta format:</p>
 <p>The assembly should be in fasta format with a <strong>single line per
 sequence</strong> and the names of chromosomes starting
 <code>chrXX</code>, where <code>XX</code> is a number from
-<code>1</code> to <code>N</code>. <a href="https://github.com/slimsuite/telociraptor">Telociraptor</a> can be
-used to generate this format (see <code>get_examples.sh</code>).</p>
-<pre><code>&gt;chr1 OX638062 ENA|OX638062|OX638062.1 Trifolium dubium genome assembly, chromosome: 1
+<code>01</code> to <code>N</code>. <a href="https://github.com/slimsuite/telociraptor">Telociraptor</a> can be
+used to generate this format (see <code>get_examples.sh</code> and
+<code>chromformat.sh</code>).</p>
+<pre><code>&gt;chr01 OX638062 ENA|OX638062|OX638062.1 Trifolium dubium genome assembly, chromosome: 1
 CCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCT...
-&gt;chr2 OX638063 ENA|OX638063|OX638063.1 Trifolium dubium genome assembly, chromosome: 2
+&gt;chr02 OX638063 ENA|OX638063|OX638063.1 Trifolium dubium genome assembly, chromosome: 2
 GTGAGTGTGTTTTATAGAATTAGTTTGGATAAACTTTTGAGCAAACACACCAAAAGAAAA...
-&gt;chr3 OX638064 ENA|OX638064|OX638064.1 Trifolium dubium genome assembly, chromosome: 3
+&gt;chr03 OX638064 ENA|OX638064|OX638064.1 Trifolium dubium genome assembly, chromosome: 3
 TAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAA...
-&gt;chr4 OX638065 ENA|OX638065|OX638065.1 Trifolium dubium genome assembly, chromosome: 4
+&gt;chr04 OX638065 ENA|OX638065|OX638065.1 Trifolium dubium genome assembly, chromosome: 4
 ACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCCTAAACCCTAAACCCTAAACC...
 ...</code></pre>
+<p><strong>NOTE:</strong> This needs a bit of work, and is currently
+limited to assemblies with 10-99 chromosomes, as it assumes a two digit
+counter. For assemblies with fewer than 10 chromosomes, rename sequences
+using <code>sed -i s/&gt;chr/&gt;chr0/ $SEQIN</code>. For 100 or more
+chromosomes, edit the <code>shamrock.sh</code> file to have
+<code>chr%03d</code> in place of <code>chr%02d</code>.</p>
 </div>
 <div id="primary-outputs" class="section level3">
 <h3>Primary outputs</h3>

@@ -43,19 +43,24 @@ SHAMROCK is designed to run as a simple shell script on an input assembly in fas
 ### Input format
 
 The assembly should be in fasta format with a **single line per sequence** and the names of chromosomes starting `chrXX`,
-where `XX` is a number from `1` to `N`. [Telociraptor](https://github.com/slimsuite/telociraptor) can be used to generate this format (see `get_examples.sh`).
+where `XX` is a number from `01` to `N`. [Telociraptor](https://github.com/slimsuite/telociraptor) can be used to generate this format 
+(see `get_examples.sh` and `chromformat.sh`).
 
 ```
->chr1 OX638062 ENA|OX638062|OX638062.1 Trifolium dubium genome assembly, chromosome: 1
+>chr01 OX638062 ENA|OX638062|OX638062.1 Trifolium dubium genome assembly, chromosome: 1
 CCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCT...
->chr2 OX638063 ENA|OX638063|OX638063.1 Trifolium dubium genome assembly, chromosome: 2
+>chr02 OX638063 ENA|OX638063|OX638063.1 Trifolium dubium genome assembly, chromosome: 2
 GTGAGTGTGTTTTATAGAATTAGTTTGGATAAACTTTTGAGCAAACACACCAAAAGAAAA...
->chr3 OX638064 ENA|OX638064|OX638064.1 Trifolium dubium genome assembly, chromosome: 3
+>chr03 OX638064 ENA|OX638064|OX638064.1 Trifolium dubium genome assembly, chromosome: 3
 TAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAA...
->chr4 OX638065 ENA|OX638065|OX638065.1 Trifolium dubium genome assembly, chromosome: 4
+>chr04 OX638065 ENA|OX638065|OX638065.1 Trifolium dubium genome assembly, chromosome: 4
 ACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCCTAAACCCTAAACCCTAAACC...
 ...
 ```
+
+**NOTE:** This needs a bit of work, and is currently limited to assemblies with 10-99 chromosomes, as it assumes a two digit counter.
+For assemblies with fewer than 10 chromosomes, rename sequences using `sed -i s/>chr/>chr0/ $SEQIN`. 
+For 100 or more chromosomes, edit the `shamrock.sh` file to have `chr%03d` in place of `chr%02d`.
 
 ### Primary outputs
 
