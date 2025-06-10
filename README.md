@@ -84,12 +84,21 @@ This can be altered with the `minchrom=INT` setting.
 
 The main outputs are a PDF of the clustering, along with two fasta files representing the parental partitioning.
 
-### Known issues
+### Known issues and considerations
 
-The initial pairing of the chromosomes based on maximum shared kmers can go wrong, 
+**Homeologue Pairing.** Pairing of the chromosomes based on maximum shared kmers can go wrong, 
 particularly when there has been a lot of rearrangements - or very long chromosomes - where
-a same chromosome can be the "best" hit for many other chromosomes. Using HiC-guided manual 
-assignment might be more effective. 
+a same chromosome can be the "best" hit for many other chromosomes. 
+Version `v0.3.0` introduced compleasm-based pairing, using the number of shared (`Duplicated`) orthologues.
+This appears to be effective but has not been broading tested.
+Using HiC-guided manual assignment might also be more effective. 
+
+**Beyond tetraploidy.** SHAMROCK is designed to partition allotetraploids. 
+Additional ploidies might be amenable to the same approach. 
+To try this, copy the `shamrock.config` file into the run directory and change `BESTN=1`,
+_e.g._ for an octoploid you would set `BESTN=3` as each chromosome has three other homeologues.
+As of `v0.3.0`, the Rscript has not been updated to partition into more parental sets, but it
+might be possible to manually assign subgenomes based on the `*.shamrock.pdf` output.
 
 ## Example
 
