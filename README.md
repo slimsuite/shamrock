@@ -62,9 +62,19 @@ ACCCTAAACCCTAAACCCTAAACCCTAAACCCTAAACCCCTAAACCCTAAACCCTAAACC...
 For assemblies with fewer than 10 chromosomes, rename sequences using `sed -i s/>chr/>chr0/ $SEQIN`. 
 For 100 or more chromosomes, edit the `shamrock.sh` file to have `chr%03d` in place of `chr%02d`.
 
+**NOTE:** Telociraptor identifies chromosomes based on a minimum length criterion - 10 Mbp by default.
+This can be altered with the `minchrom=INT` setting.
+
 ### Primary outputs
 
 The main outputs are a PDF of the clustering, along with two fasta files representing the parental partitioning.
+
+### Known issues
+
+The initial pairing of the chromosomes based on maximum shared kmers can go wrong, 
+particularly when there has been a lot of rearrangements - or very long chromosomes - where
+a same chromosome can be the "best" hit for many other chromosomes. Using HiC-guided manual 
+assignment might be more effective. 
 
 ## Example
 

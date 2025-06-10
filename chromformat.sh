@@ -8,6 +8,8 @@ SEQIN=$1
 #fi
 
 
+# [ ] : Add MINCHROM setting?
+
 # ~~~~~~ Shamrock example ~~~~~~~~
 # Download from ENA
 if [ ! -z "$2" ]; then 

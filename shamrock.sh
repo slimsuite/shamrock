@@ -2,23 +2,27 @@
 ### SHAMROCK: Splitting Homeologue Ancestors by Mapping  ~~~~~ ###
 ###             Repeats with Overlapping Common Kmers    ~~~~~ ###
 ### MAIN WORKFLOW EXECUTION SCRIPT                       ~~~~~ ###
-### VERSION: 0.0.1                                       ~~~~~ ###
-### LAST EDIT: 07/06/25                                  ~~~~~ ###
+### VERSION: 0.2.0                                       ~~~~~ ###
+### LAST EDIT: 09/06/25                                  ~~~~~ ###
 ### AUTHORS: Richard Edwards 2025                        ~~~~~ ###
 ### CONTACT: https://github.com/slimsuite/shamrock      ~~~~~ ###
 ##################################################################
 
 # This is the primary script for the SHAMROCK allotetraploid partitioning workflow.
-# Usage: ./shamrock.sh <INPUT FASTA>
+# Usage: ./shamrock.sh <INPUT FASTA> [<K>] [<RUNMODE>] [debug]
 
 ####################################### ::: HISTORY ::: ############################################
 # v0.1.0 : Initial working version.
+# v0.2.0 : Added capacity to generate and use $GENBASE.best.txt.
 
 ####################################### ::: TO DO ::: ##############################################
 # [ ] : Separate out the preflight checks into preflight.exec so it can be run separately.
 # [ ] : Concatenate the parents into two files.
 # [ ] : Consider running Compleasm and ChromSyn on the two sets of parents.
 # [ ] : Add a check that the sequences are actually found, i.e. the formatting is correct.
+# [Y] : Make it easier to use an existing *.best.txt file.
+# [ ] : Add a compleasm-based pairing of chromosomes to replace the kmer-based approach.
+# [ ] : Add a simple shamrock.config file to easily over-ride some of the default settings without argv handling.
 
 ####################################### ::: SETUP ::: ##############################################
 
@@ -54,7 +58,7 @@ if [ "$N" == "0" ]; then
 fi
 TEMPDIR=tmp_$GENBASE
 KMCDIR=kmc_$GENBASE
-#i# Set K and Debug
+#i# Set K
 K=31
 if [ ! -z "$2" ]; then
 	if [ "$2" != "debug" ]; then
@@ -62,9 +66,15 @@ if [ ! -z "$2" ]; then
 	fi
 fi
 echo "[$(date)] kmer length: $K" | tee -a $LOG
+#i# Set Run Mode
+RUNMODE=all
+if [ ! -z "$3" ] && [ "$3" != "debug" ]; then
+	RUNMODE=$3
+	echo "[$(date)] Running until step: $RUNMODE" | tee -a $LOG
+fi
 #i# Debugging
 DEBUG=FALSE
-if [ "$2" == "debug" ] || [ "$3" == "debug" ]; then
+if [ "$2" == "debug" ] || [ "$3" == "debug" ] || [ "$4" == "debug" ]; then
   DEBUG=TRUE
 fi
 echo "[$(date)] Debug mode: $DEBUG" | tee -a $LOG
@@ -195,23 +205,28 @@ STEP=$GENBASE.03-PairChrom
 START="[$(date)] Step $STEP"
 KEYOUT=$GENBASE.k$K.best.txt
 KEYOUTS="$KEYOUT $STEP.done"
-if [ ! -f "$KEYOUT" ]; then
+if [ ! -f "$STEP.done" ]; then
 
 	# Execute code for step
 	echo "[$(date)] Running $STEP ..." | tee -a $LOG
   # Pair up chromosomes based on all chromosome kmers.
-  for i in $(seq 1 $N); do
-    CHR=$(printf "chr%02d" "$i")
-  done
-  for i in $(seq 1 $N); do
-    CHR=$(printf "chr%02d" "$i")
-    grep "^$CHR," $CSV | sed 's/,/ /g' | awk '$1 != $2 {print $4, $1, $2;}' | sort -n -r | head -n1 | tee -a $GENBASE.k$K.best.txt
-  done
+  if [ -f $GENBASE.best.txt ]; then
+    echo "[$(date)] Using $GENBASE.best.txt as paired chromosomes ..." | tee -a $LOG
+    cp -v $GENBASE.best.txt $GENBASE.k$K.best.txt
+  fi
+  if [ ! -f $GENBASE.k$K.best.txt ]; then
+    for i in $(seq 1 $N); do
+      CHR=$(printf "chr%02d" "$i")
+      grep "^$CHR," $CSV | sed 's/,/ /g' | awk '$1 != $2 {print $4, $1, $2;}' | sort -n -r | head -n1 | tee -a $GENBASE.k$K.best.txt
+    done
+  fi
   awk '{print $2, $3;}' $GENBASE.k$K.best.txt | tee $GENBASE.k$K.best.tmp
   awk '{print $3, $2;}' $GENBASE.k$K.best.txt | tee -a $GENBASE.k$K.best.tmp
   for i in $(seq 1 $N); do
     CHR=$(printf "chr%02d" "$i")
-    rm $KMCDIR/$GENBASE.$CHR.alt.fasta
+    if [ -f "$KMCDIR/$GENBASE.$CHR.alt.fasta" ]; then
+      rm $KMCDIR/$GENBASE.$CHR.alt.fasta
+    fi
     for CHRJ in $(grep "^$CHR" $GENBASE.k$K.best.tmp | sort | uniq | awk '{print $2;}'); do
       echo "$CHR alt -> $CHRJ"
       cat $KMCDIR/$GENBASE.$CHRJ.fasta >> $KMCDIR/$GENBASE.$CHR.alt.fasta
@@ -342,7 +357,7 @@ if [ ! -f "$KEYOUT" ]; then
 
 	# Execute code for step
 	echo "[$(date)] Running Rscript ..." | tee -a $LOG
-	Rscript $SHAMDIR/shamrock.R basefile=$GENBASE k=$K log=$LOG
+	Rscript $SHAMDIR/shamrock.R basefile=$GENBASE k=$K outlog=$LOG
 	echo -e "$START\n[$(date)] Step $STEP complete" | tee $STEP.done | tee -a $LOG
 
 else

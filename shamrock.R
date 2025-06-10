@@ -20,6 +20,7 @@ version = "v0.0.1"
 # : k=INT = kmer length used
 # : debug=T/F = whether to switch on additional debugging outputs [FALSE]
 # : dev=T/F = whether to switch on dev mode during code updates [FALSE]
+# : outlog=FILE = outlog log messages to $FILE [stdout()]
 
 #i# Usage within R:
 # Set an override vector of commandline arguments: this will replace argvec read from the commandline
@@ -34,6 +35,8 @@ version = "v0.0.1"
 # [ ] : Add dynamic sizing of the outputs
 # [ ] : Add different colour palette options: shamrock/green/heat/inferno
 # [ ] : Add more output, including output to log.
+# [ ] : Update to call the shell script and perform additional calculations for assigning homeologues etc.
+# [ ] : Consider wrapping up in Rmd instead, a bit like MerquryRising.
 
 ####################################### ::: SETUP ::: ############################################
 ### ~ Commandline arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
@@ -145,7 +148,10 @@ p <- ggplot(df_plot, aes(x = chrj, y = chri, fill = knum)) +
   theme_minimal() +
   labs(title = "Heatmap of raw knum values", x = "chrj", y = "chri") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+logWrite(paste("Saving raw heatmap to",paste0(settings$basefile,"rawk.pdf/png")))
 pfile <- paste0(settings$basefile,".rawk.pdf")
+ggsave(pfile,p)
+pfile <- paste0(settings$basefile,".rawk.png")
 ggsave(pfile,p)
 
 
@@ -172,45 +178,37 @@ df_plot$chri <- factor(df_plot$chri, levels = row_order)
 df_plot$chrj <- factor(df_plot$chrj, levels = col_order)
 
 # Plot heatmap
-df_plot$kdist <- df_plot$kplot
-p <- ggplot(df_plot, aes(x = chrj, y = chri, fill = kdist)) +
+df_plot$knorm <- df_plot$kplot
+p <- ggplot(df_plot, aes(x = chrj, y = chri, fill = knorm)) +
   geom_tile() +
   scale_fill_viridis_c(option = "inferno") +
   theme_minimal() +
-  labs(title = "Clustered heatmap of normalised allokmer distance", x = "chrj", y = "chri") +
+  labs(title = "Clustered heatmap of normalised shared allokmers", x = "chrj", y = "chri") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 
-pfile <- paste0(settings$basefile,".shamrock.pdf")
 #!# Add dynamic sizing of the outputs
+logWrite(paste("Saving normalised heatmap to",paste0(settings$basefile,".shamrock.pdf/png")))
+pfile <- paste0(settings$basefile,".shamrock.pdf")
+ggsave(pfile,p)
+pfile <- paste0(settings$basefile,".shamrock.png")
 ggsave(pfile,p)
 
-
-# Assign parents
-# Group names by their assigned cluster
+# Assign parents - group names by their assigned cluster
+logWrite("Primary chromosome clustering...")
 clusters <- cutree(hc_rows, k = 2)  # Choose number of clusters
-#print(clusters)
 clustered_names <- split(names(clusters), clusters)
-
-# Print names in each cluster
 for (i in seq_along(clustered_names)) {
-  cat(sprintf("Parent %d:\n", i))
-  print(clustered_names[[i]])
-  cat("\n")
+  logWrite(paste(sprintf("Parent %d:", i),paste(clustered_names[[i]],collapse=",")))
   writeLines(clustered_names[[i]], paste0(settings$basefile,".parent.",i,".txt"))
 }
 
+logWrite("Secondary chromosome clustering...")
 clusters <- cutree(hc_cols, k = 2)  # Choose number of clusters
-#print(clusters)
 clustered_names <- split(names(clusters), clusters)
-
-#!# Add checks that both sets of clusters are the same.
-
-# Print names in each cluster
 for (i in seq_along(clustered_names)) {
-  cat(sprintf("Parent %d:\n", i))
-  print(clustered_names[[i]])
-  cat("\n")
+  logWrite(paste(sprintf("Parent %d:", i),paste(clustered_names[[i]],collapse=",")))
 }
+#!# Add checks that both sets of clusters are the same.
 
 
 
