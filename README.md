@@ -1,6 +1,6 @@
 <img src="shamrock-logo.png" align="right" width="200" style="margin-left: 15px;">
 
-# SHAMROCK: Splitting Homeologue Ancestors by Mapping Repeats with Overlapping Common Kmers
+# SHAMROCK: Separating Homeologue Ancestors by Mapping Repeats with Overlapping Common Kmers
 
 kmer-based separation of allotetraploid parental subgenomes. This readme was written for `v0.3.0`.
 

@@ -1,9 +1,9 @@
 ##################################################################
-### SHAMROCK: Splitting Homeologue Ancestors by Mapping  ~~~~~ ###
+### SHAMROCK: Separating Homeologue Ancestors by Mapping ~~~~~ ###
 ###             Repeats with Overlapping Common Kmers    ~~~~~ ###
 ### MAIN WORKFLOW EXECUTION SCRIPT                       ~~~~~ ###
 ### VERSION: 0.3.0                                       ~~~~~ ###
-### LAST EDIT: 09/06/25                                  ~~~~~ ###
+### LAST EDIT: 10/06/25                                  ~~~~~ ###
 ### AUTHORS: Richard Edwards 2025                        ~~~~~ ###
 ### CONTACT: https://github.com/slimsuite/shamrock      ~~~~~ ###
 ##################################################################
