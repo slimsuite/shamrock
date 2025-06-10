@@ -2,7 +2,8 @@ SHAMROCK=$0
 SHAMDIR=$(dirname $SHAMROCK)
 TELOCIRAPTOR="python3 $SHAMDIR/../telociraptor/code/telociraptor.py"
 
-SEQIN=$1
+GENBASE=$1
+SEQIN=$GENBASE.fasta
 #if [ ! -f "$SEQIN" ]; then
 #  echo "Cannot find $SEQIN"; exit 1
 #fi
@@ -12,7 +13,7 @@ SEQIN=$1
 
 # ~~~~~~ Shamrock example ~~~~~~~~
 # Download from ENA
-if [ ! -z "$2" ]; then 
+if [ ! -z "$2" ] && [ ! -f "$SEQIN" ]; then
   wget "https://www.ebi.ac.uk/ena/browser/api/fasta/links/study?accession=$2&result=sequence" -O $SEQIN
 fi
 

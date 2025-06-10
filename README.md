@@ -2,7 +2,7 @@
 
 # SHAMROCK: Splitting Homeologue Ancestors by Mapping Repeats with Overlapping Common Kmers
 
-kmer-based separation of allotetraploid parental subgenomes.
+kmer-based separation of allotetraploid parental subgenomes. This readme was written for `v0.3.0`.
 
 ## Introduction
 
@@ -10,15 +10,18 @@ SHAMROCK is a kmer-based tool for disentangling homeologous chromosomes in allot
 identifying "allokmers" unique to each homoelogue, and clustering chromosomes into subgenomes based on shared allokmer content.
 
 
-## Setup
+## Installation and setup
 
 To run SHAMROCK, you will need to have [KMC](https://github.com/refresh-bio/KMC) and R installed.
-R will need the `tidyverse` and `r-markdown` libraries. These can be set up easily in a conda environment.
+R will need the `tidyverse` and `r-markdown` libraries. For default settings, [compleasm](https://github.com/huangnengCSU/compleasm)
+should also be installed on the system.
+
+These can be set up easily in a conda environment.
 
 ```
-conda create -n kmc 
-conda activate kmc
-mamba install -c conda-forge -c bioconda kmc r-base r-tidyverse r-rmarkdown
+conda create -n shamrock
+conda activate shamrock
+mamba install -c conda-forge -c bioconda kmc r-base r-tidyverse r-rmarkdown compleasm
 ```
 
 (If you don't use `mamba`, then replace the last command with `conda`.)
@@ -28,8 +31,20 @@ python3 on your system, and clone the [Telociraptor](https://github.com/slimsuit
 [SHAMROCK](https://github.com/slimsuite/shamrock) repo.
 
 ```
-# ├── shamrock/
-# └── telociraptor/
+├── shamrock/
+└── telociraptor/
+```
+
+For example, to set up and run in the directory `~/code`:
+
+```
+cd ~/code/
+git clone https://github.com/slimsuite/shamrock
+git clone https://github.com/slimsuite/telociraptor
+
+# Test run
+~/code/shamrock.sh
+python3 ~/code/telociraptor/code/telociraptor.sh --help
 ```
 
 ## Running SHAMROCK

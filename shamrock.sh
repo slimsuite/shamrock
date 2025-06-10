@@ -2,27 +2,31 @@
 ### SHAMROCK: Splitting Homeologue Ancestors by Mapping  ~~~~~ ###
 ###             Repeats with Overlapping Common Kmers    ~~~~~ ###
 ### MAIN WORKFLOW EXECUTION SCRIPT                       ~~~~~ ###
-### VERSION: 0.2.0                                       ~~~~~ ###
+### VERSION: 0.3.0                                       ~~~~~ ###
 ### LAST EDIT: 09/06/25                                  ~~~~~ ###
 ### AUTHORS: Richard Edwards 2025                        ~~~~~ ###
 ### CONTACT: https://github.com/slimsuite/shamrock      ~~~~~ ###
 ##################################################################
 
 # This is the primary script for the SHAMROCK allotetraploid partitioning workflow.
-# Usage: ./shamrock.sh <INPUT FASTA> [<K>] [<RUNMODE>] [debug]
+# Usage: ./shamrock.sh <INPUT FASTA> [<RUNMODE>]
 
 ####################################### ::: HISTORY ::: ############################################
 # v0.1.0 : Initial working version.
 # v0.2.0 : Added capacity to generate and use $GENBASE.best.txt.
+# v0.3.0 : Added simple shamrock.config file and compleasm homeologue assignment.
+VERSION=v0.3.0
 
 ####################################### ::: TO DO ::: ##############################################
-# [ ] : Separate out the preflight checks into preflight.exec so it can be run separately.
-# [ ] : Concatenate the parents into two files.
+# [?] : Separate out the preflight checks into preflight.exec so it can be run separately.
+# [Y] : Concatenate the parents into two files.
 # [ ] : Consider running Compleasm and ChromSyn on the two sets of parents.
 # [ ] : Add a check that the sequences are actually found, i.e. the formatting is correct.
 # [Y] : Make it easier to use an existing *.best.txt file.
-# [ ] : Add a compleasm-based pairing of chromosomes to replace the kmer-based approach.
-# [ ] : Add a simple shamrock.config file to easily over-ride some of the default settings without argv handling.
+# [Y] : Add a compleasm-based pairing of chromosomes to replace the kmer-based approach.
+# [Y] : Add a simple shamrock.config file to easily over-ride some of the default settings without argv handling.
+# [ ] : Add option to look at higher ploidy. (Can do this for homeologues)
+# [ ] : Add option to pre-screen for polyploidy using compleasm and a duplication threshold. (Move compleasm step higher.)
 
 ####################################### ::: SETUP ::: ##############################################
 
@@ -33,12 +37,19 @@ SHAMDIR=$(dirname $SHAMROCK)
 ### ~~~~~~~ Input fasta file ~~~~~~~~ ##
 SEQIN=$1
 if [ -z "$SEQIN" ]; then
-	echo "Usage: ./shamrock.sh <INPUT FASTA> [<k>] [debug]"; exit 1
+	echo "Usage: ./shamrock.sh <INPUT FASTA> [<RUNMODE>]"; exit 1
 fi
-
+if [ "$SEQIN" == "--version" ]; then
+  echo "shamrock $VERSION"; exit 0
+fi
+if [ "$SEQIN" == "--help" ]; then
+	echo "Usage: ./shamrock.sh <INPUT FASTA> [<RUNMODE>]"
+	echo "Settings can be overridden using shamrock.config"
+  echo "Please see https://github.com/slimsuite/shamrock for help with usage."; exit 0
+fi
 if [ ! -f "$SEQIN" ]; then
 	echo "Input sequence file not found '$SEQIN'"
-	echo "Usage: ./shamrock.sh <INPUT FASTA> [<k>] [debug]"; exit 1
+	echo "Usage: ./shamrock.sh <INPUT FASTA>"; exit 1
 fi
 #i# Output prefix
 GENBASE=$(basename $SEQIN | awk -F '.' '{print $1;}')
@@ -58,26 +69,51 @@ if [ "$N" == "0" ]; then
 fi
 TEMPDIR=tmp_$GENBASE
 KMCDIR=kmc_$GENBASE
+#i# Set Run Mode
+RUNMODE=completion
+if [ ! -z "$2" ]; then
+  RUNMODE=$2
+fi
+echo "[$(date)] Running until step: $RUNMODE" | tee -a $LOG
+
+### ~~~~~~~~~~ Run settings ~~~~~~~~~~ ###
 #i# Set K
 K=31
-if [ ! -z "$2" ]; then
-	if [ "$2" != "debug" ]; then
-	  K=$2
-	fi
+#i# Best homeologue matching strategy (compleasm/kmer/<FILE>)
+BEST=compleasm
+if [ -f $GENBASE.best.txt ]; then
+  echo "[$(date)] Using $GENBASE.best.txt as paired chromosomes ..." | tee -a $LOG
+  BEST=$GENBASE.best.txt
 fi
-echo "[$(date)] kmer length: $K" | tee -a $LOG
-#i# Set Run Mode
-RUNMODE=all
-if [ ! -z "$3" ] && [ "$3" != "debug" ]; then
-	RUNMODE=$3
-	echo "[$(date)] Running until step: $RUNMODE" | tee -a $LOG
-fi
+#i# Compleasm lineage
+LINEAGE=embryophyta
+#i# Number of Best Homeologues
+BESTN=1
 #i# Debugging
 DEBUG=FALSE
-if [ "$2" == "debug" ] || [ "$3" == "debug" ] || [ "$4" == "debug" ]; then
-  DEBUG=TRUE
+#i# Dev settings
+DEV=FALSE
+#i# Number of threads for compleasm etc.
+THREADS=$(nproc)
+#i# Config override
+if [ -f "shamrock.config" ]; then
+	echo "[$(date)] Loading settings from shamrock.config" | tee -a $LOG
+	source shamrock.config
 fi
+if [[ ! "$THREADS" =~ ^-?[0-9]+$ ]]; then
+  echo "[$(date)] Thread count not recognised - setting to 16: $THREADS" | tee -a $LOG
+  THREADS=16
+fi
+echo "[$(date)] kmer length: $K" | tee -a $LOG
+echo "[$(date)] Best Homeologue identification strategy: $BEST" | tee -a $LOG
+if [ $BEST == "compleasm" ]; then
+  echo "[$(date)] Compleasm lineage: $LINEAGE" | tee -a $LOG
+fi
+echo "Number of threads: $THREADS"
+echo "Number of best hits for homeologues: $BESTN"
 echo "[$(date)] Debug mode: $DEBUG" | tee -a $LOG
+echo "[$(date)] Dev mode: $DEV" | tee -a $LOG
+
 #i# Run Directory
 RUNDIR=$(pwd)
 echo "[$(date)] Run from directory: $RUNDIR" | tee -a $LOG
@@ -210,14 +246,23 @@ if [ ! -f "$STEP.done" ]; then
 	# Execute code for step
 	echo "[$(date)] Running $STEP ..." | tee -a $LOG
   # Pair up chromosomes based on all chromosome kmers.
-  if [ -f $GENBASE.best.txt ]; then
-    echo "[$(date)] Using $GENBASE.best.txt as paired chromosomes ..." | tee -a $LOG
+  if [ -f $BEST ]; then
+    echo "[$(date)] Using $BEST as paired chromosomes ..." | tee -a $LOG
+    cp -v $BEST $GENBASE.k$K.best.txt
+  fi
+  # Use compleasm to make the best file
+  if [ "$BEST" == "compleasm" ]; then
+    COMPRES=$GENBASE.compleasm/${LINEAGE}_odb12/full_table.tsv
+    if [ ! -f "$COMPRES"]; then
+      compleasm run -a $SEQIN -o $GENBASE.compleasm -t $THREADS -l $LINEAGE
+    fi
+    $SHAMDIR/compleasmbest.sh $GENBASE $COMPRES $N $BESTN
     cp -v $GENBASE.best.txt $GENBASE.k$K.best.txt
   fi
   if [ ! -f $GENBASE.k$K.best.txt ]; then
     for i in $(seq 1 $N); do
       CHR=$(printf "chr%02d" "$i")
-      grep "^$CHR," $CSV | sed 's/,/ /g' | awk '$1 != $2 {print $4, $1, $2;}' | sort -n -r | head -n1 | tee -a $GENBASE.k$K.best.txt
+      grep "^$CHR," $CSV | sed 's/,/ /g' | awk '$1 != $2 {print $4, $1, $2;}' | sort -n -r | head -n $BESTN | tee -a $GENBASE.k$K.best.txt
     done
   fi
   awk '{print $2, $3;}' $GENBASE.k$K.best.txt | tee $GENBASE.k$K.best.tmp

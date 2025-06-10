@@ -30,3 +30,7 @@ cd ..
 
 SEQIN=example/drTriDubi3.tweak.fasta
 echo "[$(date)] Ready for use as input: $SEQIN"
+
+
+# ~~~~~~ Hemp-nettle example ~~~~~~~~
+$SHAMDIR/chromformat.sh daGalTetr1 PRJEB69540

@@ -356,7 +356,8 @@ display: none;
 <div id="shamrock-splitting-homeologue-ancestors-by-mapping-repeats-with-overlapping-common-kmers" class="section level1">
 <h1>SHAMROCK: Splitting Homeologue Ancestors by Mapping Repeats with
 Overlapping Common Kmers</h1>
-<p>kmer-based separation of allotetraploid parental subgenomes.</p>
+<p>kmer-based separation of allotetraploid parental subgenomes. This
+readme was written for <code>v0.3.0</code>.</p>
 <div id="introduction" class="section level2">
 <h2>Introduction</h2>
 <p>SHAMROCK is a kmer-based tool for disentangling homeologous
@@ -365,14 +366,16 @@ content, identifying “allokmers” unique to each homoelogue, and
 clustering chromosomes into subgenomes based on shared allokmer
 content.</p>
 </div>
-<div id="setup" class="section level2">
-<h2>Setup</h2>
+<div id="installation-and-setup" class="section level2">
+<h2>Installation and setup</h2>
 <p>To run SHAMROCK, you will need to have <a href="https://github.com/refresh-bio/KMC">KMC</a> and R installed. R
 will need the <code>tidyverse</code> and <code>r-markdown</code>
-libraries. These can be set up easily in a conda environment.</p>
-<pre><code>conda create -n kmc 
-conda activate kmc
-mamba install -c conda-forge -c bioconda kmc r-base r-tidyverse r-rmarkdown</code></pre>
+libraries. For default settings, <a href="https://github.com/huangnengCSU/compleasm">compleasm</a> should
+also be installed on the system.</p>
+<p>These can be set up easily in a conda environment.</p>
+<pre><code>conda create -n shamrock
+conda activate shamrock
+mamba install -c conda-forge -c bioconda kmc r-base r-tidyverse r-rmarkdown compleasm</code></pre>
 <p>(If you don’t use <code>mamba</code>, then replace the last command
 with <code>conda</code>.)</p>
 <p>To run the examples, or to use <a href="https://github.com/slimsuite/telociraptor">Telociraptor</a> for
@@ -380,8 +383,17 @@ formatting input, you will also want to have python3 on your system, and
 clone the <a href="https://github.com/slimsuite/telociraptor">Telociraptor</a> repo
 next to the <a href="https://github.com/slimsuite/shamrock">SHAMROCK</a>
 repo.</p>
-<pre><code># ├── shamrock/
-# └── telociraptor/</code></pre>
+<pre><code>├── shamrock/
+└── telociraptor/</code></pre>
+<p>For example, to set up and run in the directory
+<code>~/code</code>:</p>
+<pre><code>cd ~/code/
+git clone https://github.com/slimsuite/shamrock
+git clone https://github.com/slimsuite/telociraptor
+
+# Test run
+~/code/shamrock.sh
+python3 ~/code/telociraptor/code/telociraptor.sh --help</code></pre>
 </div>
 <div id="running-shamrock" class="section level2">
 <h2>Running SHAMROCK</h2>
