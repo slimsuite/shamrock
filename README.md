@@ -4,6 +4,14 @@
 
 kmer-based separation of allotetraploid parental subgenomes. This readme was written for `v0.3.0`.
 
+* [Introduction](#Introduction)
+* Installation and setup
+* Running SHAMROCK
+* [Examples](#Examples)
+* Citation
+* Future Plans
+
+
 ## Introduction
 
 SHAMROCK is a kmer-based tool for disentangling homeologous chromosomes in allotetraploid genomes by subtracting shared sequence content, 
@@ -100,7 +108,7 @@ _e.g._ for an octoploid you would set `BESTN=3` as each chromosome has three oth
 As of `v0.3.0`, the Rscript has not been updated to partition into more parental sets, but it
 might be possible to manually assign subgenomes based on the `*.shamrock.pdf` output.
 
-## Example
+## Examples
 
 Partitioning of the [Shamrock genome](https://pmc.ncbi.nlm.nih.gov/articles/PMC11384199/), _Trifolium dubium_:
 

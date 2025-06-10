@@ -1,7 +1,7 @@
 ########################################################
 ### SHAMROCK clustering and plotting            ~~~~ ###
-### VERSION: 0.0.1                              ~~~~ ###
-### LAST EDIT: 07/06/25                         ~~~~ ###
+### VERSION: 0.1.0                              ~~~~ ###
+### LAST EDIT: 10/06/25                         ~~~~ ###
 ### AUTHORS: Richard Edwards 2025               ~~~~ ###
 ### CONTACT: rich.edwards@uwa.edu.au            ~~~~ ###
 ### CITE: https://github.com/slimsuite/shamrock ~~~~ ###
@@ -11,13 +11,15 @@
 
 ####################################### ::: HISTORY ::: ############################################
 # v0.0.0 : Initial version with basic plotting.
-version = "v0.0.1"
+# v0.1.0 : Added partition=INT to set number of subgenomes [2].
+version = "v0.1.0"
 
 ####################################### ::: USAGE ::: ############################################
 # Example use:
 # Rscript shamrock.R [basefile=FILE]
 # : basefile=FILE = Prefix for main inputs and outputs []
 # : k=INT = kmer length used
+# : partition=INT = number of subgenomes to split into [2]
 # : debug=T/F = whether to switch on additional debugging outputs [FALSE]
 # : dev=T/F = whether to switch on dev mode during code updates [FALSE]
 # : outlog=FILE = outlog log messages to $FILE [stdout()]
@@ -40,7 +42,7 @@ version = "v0.0.1"
 
 ####################################### ::: SETUP ::: ############################################
 ### ~ Commandline arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
-defaults = list(k=31,
+defaults = list(k=31,partition=2,
                 debug=FALSE,dev=FALSE,
                 rdir="",runpath="",
                 outlog=stdout())
@@ -60,7 +62,7 @@ for(cmd in argvec){
   }
 }
 #i# integer parameters
-for(cmd in c("k")){
+for(cmd in c("k","partition")){
   settings[[cmd]] = as.integer(settings[[cmd]])
 }
 #i# other numeric parameter
@@ -195,7 +197,7 @@ ggsave(pfile,p)
 
 # Assign parents - group names by their assigned cluster
 logWrite("Primary chromosome clustering...")
-clusters <- cutree(hc_rows, k = 2)  # Choose number of clusters
+clusters <- cutree(hc_rows, k = settings$partition)
 clustered_names <- split(names(clusters), clusters)
 for (i in seq_along(clustered_names)) {
   logWrite(paste(sprintf("Parent %d:", i),paste(clustered_names[[i]],collapse=",")))
@@ -203,7 +205,7 @@ for (i in seq_along(clustered_names)) {
 }
 
 logWrite("Secondary chromosome clustering...")
-clusters <- cutree(hc_cols, k = 2)  # Choose number of clusters
+clusters <- cutree(hc_cols, k = settings$partition)
 clustered_names <- split(names(clusters), clusters)
 for (i in seq_along(clustered_names)) {
   logWrite(paste(sprintf("Parent %d:", i),paste(clustered_names[[i]],collapse=",")))

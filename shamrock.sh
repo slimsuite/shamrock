@@ -2,7 +2,7 @@
 ### SHAMROCK: Separating Homeologue Ancestors by Mapping ~~~~~ ###
 ###             Repeats with Overlapping Common Kmers    ~~~~~ ###
 ### MAIN WORKFLOW EXECUTION SCRIPT                       ~~~~~ ###
-### VERSION: 0.3.0                                       ~~~~~ ###
+### VERSION: 0.3.1                                       ~~~~~ ###
 ### LAST EDIT: 10/06/25                                  ~~~~~ ###
 ### AUTHORS: Richard Edwards 2025                        ~~~~~ ###
 ### CONTACT: https://github.com/slimsuite/shamrock      ~~~~~ ###
@@ -15,7 +15,8 @@
 # v0.1.0 : Initial working version.
 # v0.2.0 : Added capacity to generate and use $GENBASE.best.txt.
 # v0.3.0 : Added simple shamrock.config file and compleasm homeologue assignment.
-VERSION=v0.3.0
+# v0.3.1 : Modified the R output and added clustering of higher ploidies.
+VERSION=v0.3.1
 
 ####################################### ::: TO DO ::: ##############################################
 # [?] : Separate out the preflight checks into preflight.exec so it can be run separately.
@@ -65,7 +66,7 @@ echo "[$(date)] Output prefix: $GENBASE" | tee -a $LOG
 N=$(grep -c "^>chr" $SEQIN)
 echo "[$(date)] Number of chromosomes: $N" | tee -a $LOG
 if [ "$N" == "0" ]; then
-  echo "No chromosomes (names chrXX) found in $SEQIN"; exit 1
+  echo "[$(date)] No chromosomes (names chrXX) found in $SEQIN"; exit 1
 fi
 TEMPDIR=tmp_$GENBASE
 KMCDIR=kmc_$GENBASE
@@ -109,8 +110,8 @@ echo "[$(date)] Best Homeologue identification strategy: $BEST" | tee -a $LOG
 if [ $BEST == "compleasm" ]; then
   echo "[$(date)] Compleasm lineage: $LINEAGE" | tee -a $LOG
 fi
-echo "Number of threads: $THREADS"
-echo "Number of best hits for homeologues: $BESTN"
+echo "[$(date)] Number of threads: $THREADS" | tee -a $LOG
+echo "[$(date)] Number of best hits for homeologues: $BESTN" | tee -a $LOG
 echo "[$(date)] Debug mode: $DEBUG" | tee -a $LOG
 echo "[$(date)] Dev mode: $DEV" | tee -a $LOG
 
@@ -135,6 +136,7 @@ if [ ! -d "$KMCDIR" ]; then
 fi
 
 ####################################### ::: SHAMROCK ::: ##############################################
+STEPN=0
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~ STEP 1: KMC kmer profiles per chromosome ~~~~ ###
@@ -146,10 +148,12 @@ fi
 ## - Individual chromosome fasta files ($KMCDIR/$GENBASE.$CHR.fasta)
 ## - Individual chromosome KMC profiles.
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
-STEP=$GENBASE.01-ChromKMC
+STEP=ChromKMC
+STEPN=$((STEPN + 1))
+DONE=$GENBASE.$(printf "chr%02d" "$STEPN").$STEP.done
 START="[$(date)] Step $STEP"
-KEYOUT=$STEP.done
-if [ ! -f "$KEYOUT" ]; then
+KEYOUT=$DONE
+if [ ! -f "$KEYOUT" ] || [ "$RUNMODE" == "force" ] || [ "$RUNMODE" == "$STEP" ]; then
 
 	#i# Run Telociraptor on Hap1
 	echo "[$(date)] Pull out each chromosome into a file and generate kmer profiles with KMC..."
@@ -159,7 +163,7 @@ if [ ! -f "$KEYOUT" ]; then
     echo chr$i "->" $CHR
     grep -A 1 ">$CHR" $SEQIN | tee $KMCDIR/$GENBASE.$CHR.fasta | grep ">"
     kmc -k$K -ci1 -fm $KMCDIR/$GENBASE.$CHR.fasta $KMCDIR/$GENBASE.$CHR.k$K $TEMPDIR
-  done && echo -e "$START\n[$(date)] Step $STEP complete" | tee $STEP.done | tee -a $LOG
+  done && echo -e "$START\n[$(date)] Step $STEPN $STEP complete" | tee $DONE | tee -a $LOG
 
 else
 	echo "[$(date)] File found: $KEYOUT - skipping $STEP step" | tee -a $LOG
@@ -402,7 +406,7 @@ if [ ! -f "$KEYOUT" ]; then
 
 	# Execute code for step
 	echo "[$(date)] Running Rscript ..." | tee -a $LOG
-	Rscript $SHAMDIR/shamrock.R basefile=$GENBASE k=$K outlog=$LOG
+	Rscript $SHAMDIR/shamrock.R basefile=$GENBASE k=$K partition=$((BESTN + 1)) | tee -a $LOG
 	echo -e "$START\n[$(date)] Step $STEP complete" | tee $STEP.done | tee -a $LOG
 
 else
