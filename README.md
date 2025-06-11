@@ -5,11 +5,12 @@
 kmer-based separation of allotetraploid parental subgenomes. This readme was written for `v0.3.0`.
 
 * [Introduction](#Introduction)
-* Installation and setup
-* Running SHAMROCK
+* [Installation and setup](#installation-and-setup)
+* [Running SHAMROCK](#running-shamrock)
+* [How it works](#how-it-works)
 * [Examples](#Examples)
-* Citation
-* Future Plans
+* [Citation](#Citation)
+* [Future Plans](#future-plans)
 
 
 ## Introduction
@@ -88,9 +89,68 @@ For 100 or more chromosomes, edit the `shamrock.sh` file to have `chr%03d` in pl
 **NOTE:** Telociraptor identifies chromosomes based on a minimum length criterion - 10 Mbp by default.
 This can be altered with the `minchrom=INT` setting.
 
+If you have a species that has data in ENA with a BioProject ID and chromosomes named and numbered (`chromosome: X`) in the description,
+you can use the `chromformat.sh` script to download and reformat the data:
+
+```
+chromformat.sh <GENBASE> <BIOPROJECT>
+```
+
+For example, for the shamrock:
+
+```
+~/code/shamrock/chromformat.sh drTriDubi3 PRJEB62713
+```
+
+For other species, some additional formatting may be required. 
+For example, the Clover Daisy example does not have named chromosomes and needs some of the contigs renamed prior to running `chromformat.sh`.
+Note that the BioProject is not neeed in this instance as the fasta file already exists.
+(This script needs the input file to be named `$GENBASE.fasta`.)
+
+```
+wget "ftp://ftp.ebi.ac.uk/pub/databases/ena/wgs/public/cam/CAMTDV01.fasta.gz"
+unpigz -v CAMTDV01.fasta.gz
+sed 's/contg: chr_/chromosome: /' CAMTDV01.fasta > ScaAtr.fasta 
+~/code/shamrock/chromformat.sh ScaAtr
+```
+
 ### Primary outputs
 
 The main outputs are a PDF of the clustering, along with two fasta files representing the parental partitioning.
+
+### Controlling SHAMROCK runs
+
+SHAMROCK can be run with an optional `<RUNMODE>` after the input fasta file:
+
+```
+./shamrock/shamrock.sh <FASTA> <RUNMODE>
+```
+
+By default, `$RUNMODE` is "completion". 
+If `$RUNMODE` is set to "next" then SHAMROCK will run the next step and then stop.
+If `$RUNMODE` is set to one of the stages (see [How it works](#how-it-works)), SHAMROCK
+will run to that stage and then stop. If that stage has already run, it will re-run just that stage.
+If `$RUNMODE` is set to "force" then it will re-run every stage.
+
+**NOTE:** You can tell whether a stage completed, as it will produce a `$GENBASE.XX-$STAGE.done` file.
+
+For more control of settings, you can also copy the `shamrock.config` file from the repo into your run directory and edit any settings.
+These will over-ride any default settings.
+
+### Manual homeologue identification
+
+To over-ride either compleasm or kmer-based homeologue detection, a `$GENBASE.best.txt` file can be provided.
+This is a simple space-delimited text file with three fields: `cluster chri chrj`, where `cluster` is an arbitrary integer, 
+`chri` is one chromosome, and `chrj` is a homeologue. Relationships will be inverted to form final homeologue sets,
+but each chromosome must appear at least once as `chri` or `chrj`, _e.g._
+
+```
+3226176 chr01 chr05
+4559767 chr02 chr12
+3289711 chr03 chr13
+...
+```
+
 
 ### Known issues and considerations
 
@@ -107,6 +167,42 @@ To try this, copy the `shamrock.config` file into the run directory and change `
 _e.g._ for an octoploid you would set `BESTN=3` as each chromosome has three other homeologues.
 As of `v0.3.0`, the Rscript has not been updated to partition into more parental sets, but it
 might be possible to manually assign subgenomes based on the `*.shamrock.pdf` output.
+
+
+## How it works
+
+SHAMROCK `v0.3.0+` consists of the following stages:
+
+1. **ChromKMC.** Each chromosome is pulled out into a separate fasta file and KMC is used to generate kmer profiles per chromosome.
+
+2. **ChromIntersect.** Unless the `$BEST` file (see below) has been provided manually, each chromosome will be compared to every other
+for either shared Compleasm `Duplicated` genes (`BEST=compleasm`), or kmer intersects (`BEST=kmers`).
+
+3. **PairChrom.** Based on the number of intersecting genes or kmers from the previous step (or a provided `$GENBASE.best.txt` file),
+chromosomes will be grouped into homeologous sets. For manual files, all listed chromosome pairs will be considered homeologues.
+For kmer- or gene-based clustering, the top `$BESTN` other chromosomes will be included as pairs for each chromosome.  
+The full set are then output to `kmc_$GENBASE/$GENBASE.$CHR.alt.fasta` files.
+**NOTE 1:** By default, `$BESTN` is set to 1, which represents tetraploidy.
+**NOTE 2:** This can go wrong if there has been a lot of rearrangements within the two subgenomes such that chromosomes no longer match.
+
+4. **AlloKmers.** The core element of SHAMROCK is the establishment of "allokmers". 
+These are kmers that are unique to one homeologue, _i.e._ not found in its homeologous chromosomes.
+Allokmers are identified by subtracting the full set of kmers from the `kmc_$GENBASE/$GENBASE.$CHR.alt.fasta` file generated during **PairChrom**
+from the full chromosome kmer complement generated in **ChromKMC**.
+
+5. **AlloKmerIntersect.** Subgenomes are identified by generating pairwise allokmer intersects for all pairs of chromosomes. 
+These are used in the **Rscript** step to cluster chromosomes into distinct allokmer distance clusters.
+
+6. **Rscript.** Pairwise shared allokmer counts are converted into a normalised similarity matrix. 
+For each chromosome, the maximum non-self allokmer count is set at 100% similarity, and all allokmer counts for that chromosome normalised to a 
+proportion of the maximal count. (Self counts are capped at 1.0.) 
+Normalised counts are then used to generate a heatmap with `ggplot` `geom_tile()`, with axes arranged according to `hclust` hierarchical clustering of the matrix.
+The final subgenomes are established using `cuttree` partitioning of the row clusters.
+By default, two subclusters are created. This is controlled by `$BESTN` as with **PairChrom**.
+The Rscript can be re-run with different numbers of clusters by over-riding the `partition=INT` settting.
+
+7. **SubGenomes.** The final step will take the subgenome chromosome lists and generate fasta files for each subgenome.
+
 
 ## Examples
 

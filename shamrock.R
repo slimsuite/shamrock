@@ -201,10 +201,10 @@ clusters <- cutree(hc_rows, k = settings$partition)
 clustered_names <- split(names(clusters), clusters)
 for (i in seq_along(clustered_names)) {
   logWrite(paste(sprintf("Parent %d:", i),paste(clustered_names[[i]],collapse=",")))
-  writeLines(clustered_names[[i]], paste0(settings$basefile,".parent.",i,".txt"))
+  writeLines(clustered_names[[i]], paste0(settings$basefile,".subgenome.",i,".txt"))
 }
 
-logWrite("Secondary chromosome clustering...")
+logWrite("Secondary chromosome clustering check...")
 clusters <- cutree(hc_cols, k = settings$partition)
 clustered_names <- split(names(clusters), clusters)
 for (i in seq_along(clustered_names)) {

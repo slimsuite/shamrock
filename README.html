@@ -360,11 +360,12 @@ Overlapping Common Kmers</h1>
 readme was written for <code>v0.3.0</code>.</p>
 <ul>
 <li><a href="#Introduction">Introduction</a></li>
-<li>Installation and setup</li>
-<li>Running SHAMROCK</li>
+<li><a href="#installation-and-setup">Installation and setup</a></li>
+<li><a href="#running-shamrock">Running SHAMROCK</a></li>
+<li><a href="#how-it-works">How it works</a></li>
 <li><a href="#Examples">Examples</a></li>
-<li>Citation</li>
-<li>Future Plans</li>
+<li><a href="#Citation">Citation</a></li>
+<li><a href="#future-plans">Future Plans</a></li>
 </ul>
 <div id="introduction" class="section level2">
 <h2>Introduction</h2>
@@ -434,11 +435,61 @@ chromosomes, edit the <code>shamrock.sh</code> file to have
 <p><strong>NOTE:</strong> Telociraptor identifies chromosomes based on a
 minimum length criterion - 10 Mbp by default. This can be altered with
 the <code>minchrom=INT</code> setting.</p>
+<p>If you have a species that has data in ENA with a BioProject ID and
+chromosomes named and numbered (<code>chromosome: X</code>) in the
+description, you can use the <code>chromformat.sh</code> script to
+download and reformat the data:</p>
+<pre><code>chromformat.sh &lt;GENBASE&gt; &lt;BIOPROJECT&gt;</code></pre>
+<p>For example, for the shamrock:</p>
+<pre><code>~/code/shamrock/chromformat.sh drTriDubi3 PRJEB62713</code></pre>
+<p>For other species, some additional formatting may be required. For
+example, the Clover Daisy example does not have named chromosomes and
+needs some of the contigs renamed prior to running
+<code>chromformat.sh</code>. Note that the BioProject is not neeed in
+this instance as the fasta file already exists. (This script needs the
+input file to be named <code>$GENBASE.fasta</code>.)</p>
+<pre><code>wget &quot;ftp://ftp.ebi.ac.uk/pub/databases/ena/wgs/public/cam/CAMTDV01.fasta.gz&quot;
+unpigz -v CAMTDV01.fasta.gz
+sed &#39;s/contg: chr_/chromosome: /&#39; CAMTDV01.fasta &gt; ScaAtr.fasta 
+~/code/shamrock/chromformat.sh ScaAtr</code></pre>
 </div>
 <div id="primary-outputs" class="section level3">
 <h3>Primary outputs</h3>
 <p>The main outputs are a PDF of the clustering, along with two fasta
 files representing the parental partitioning.</p>
+</div>
+<div id="controlling-shamrock-runs" class="section level3">
+<h3>Controlling SHAMROCK runs</h3>
+<p>SHAMROCK can be run with an optional <code>&lt;RUNMODE&gt;</code>
+after the input fasta file:</p>
+<pre><code>./shamrock/shamrock.sh &lt;FASTA&gt; &lt;RUNMODE&gt;</code></pre>
+<p>By default, <code>$RUNMODE</code> is “completion”. If
+<code>$RUNMODE</code> is set to “next” then SHAMROCK will run the next
+step and then stop. If <code>$RUNMODE</code> is set to one of the stages
+(see <a href="#how-it-works">How it works</a>), SHAMROCK will run to
+that stage and then stop. If that stage has already run, it will re-run
+just that stage. If <code>$RUNMODE</code> is set to “force” then it will
+re-run every stage.</p>
+<p><strong>NOTE:</strong> You can tell whether a stage completed, as it
+will produce a <code>$GENBASE.XX-$STAGE.done</code> file.</p>
+<p>For more control of settings, you can also copy the
+<code>shamrock.config</code> file from the repo into your run directory
+and edit any settings. These will over-ride any default settings.</p>
+</div>
+<div id="manual-homeologue-identification" class="section level3">
+<h3>Manual homeologue identification</h3>
+<p>To over-ride either compleasm or kmer-based homeologue detection, a
+<code>$GENBASE.best.txt</code> file can be provided. This is a simple
+space-delimited text file with three fields:
+<code>cluster chri chrj</code>, where <code>cluster</code> is an
+arbitrary integer, <code>chri</code> is one chromosome, and
+<code>chrj</code> is a homeologue. Relationships will be inverted to
+form final homeologue sets, but each chromosome must appear at least
+once as <code>chri</code> or <code>chrj</code>, <em>e.g.</em></p>
+<pre><code>3226176 chr01 chr05
+4559767 chr02 chr12
+3289711 chr03 chr13
+...</code></pre>
 </div>
 <div id="known-issues-and-considerations" class="section level3">
 <h3>Known issues and considerations</h3>
@@ -460,6 +511,60 @@ not been updated to partition into more parental sets, but it might be
 possible to manually assign subgenomes based on the
 <code>*.shamrock.pdf</code> output.</p>
 </div>
+</div>
+<div id="how-it-works" class="section level2">
+<h2>How it works</h2>
+<p>SHAMROCK <code>v0.3.0+</code> consists of the following stages:</p>
+<ol style="list-style-type: decimal">
+<li><p><strong>ChromKMC.</strong> Each chromosome is pulled out into a
+separate fasta file and KMC is used to generate kmer profiles per
+chromosome.</p></li>
+<li><p><strong>ChromIntersect.</strong> Unless the <code>$BEST</code>
+file (see below) has been provided manually, each chromosome will be
+compared to every other for either shared Compleasm
+<code>Duplicated</code> genes (<code>BEST=compleasm</code>), or kmer
+intersects (<code>BEST=kmers</code>).</p></li>
+<li><p><strong>PairChrom.</strong> Based on the number of intersecting
+genes or kmers from the previous step (or a provided
+<code>$GENBASE.best.txt</code> file), chromosomes will be grouped into
+homeologous sets. For manual files, all listed chromosome pairs will be
+considered homeologues. For kmer- or gene-based clustering, the top
+<code>$BESTN</code> other chromosomes will be included as pairs for each
+chromosome.<br />
+The full set are then output to
+<code>kmc_$GENBASE/$GENBASE.$CHR.alt.fasta</code> files. <strong>NOTE
+1:</strong> By default, <code>$BESTN</code> is set to 1, which
+represents tetraploidy. <strong>NOTE 2:</strong> This can go wrong if
+there has been a lot of rearrangements within the two subgenomes such
+that chromosomes no longer match.</p></li>
+<li><p><strong>AlloKmers.</strong> The core element of SHAMROCK is the
+establishment of “allokmers”. These are kmers that are unique to one
+homeologue, <em>i.e.</em> not found in its homeologous chromosomes.
+Allokmers are identified by subtracting the full set of kmers from the
+<code>kmc_$GENBASE/$GENBASE.$CHR.alt.fasta</code> file generated during
+<strong>PairChrom</strong> from the full chromosome kmer complement
+generated in <strong>ChromKMC</strong>.</p></li>
+<li><p><strong>AlloKmerIntersect.</strong> Subgenomes are identified by
+generating pairwise allokmer intersects for all pairs of chromosomes.
+These are used in the <strong>Rscript</strong> step to cluster
+chromosomes into distinct allokmer distance clusters.</p></li>
+<li><p><strong>Rscript.</strong> Pairwise shared allokmer counts are
+converted into a normalised similarity matrix. For each chromosome, the
+maximum non-self allokmer count is set at 100% similarity, and all
+allokmer counts for that chromosome normalised to a proportion of the
+maximal count. (Self counts are capped at 1.0.) Normalised counts are
+then used to generate a heatmap with <code>ggplot</code>
+<code>geom_tile()</code>, with axes arranged according to
+<code>hclust</code> hierarchical clustering of the matrix. The final
+subgenomes are established using <code>cuttree</code> partitioning of
+the row clusters. By default, two subclusters are created. This is
+controlled by <code>$BESTN</code> as with <strong>PairChrom</strong>.
+The Rscript can be re-run with different numbers of clusters by
+over-riding the <code>partition=INT</code> settting.</p></li>
+<li><p><strong>SubGenomes.</strong> The final step will take the
+subgenome chromosome lists and generate fasta files for each
+subgenome.</p></li>
+</ol>
 </div>
 <div id="examples" class="section level2">
 <h2>Examples</h2>

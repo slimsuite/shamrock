@@ -2,8 +2,8 @@
 ### SHAMROCK: Separating Homeologue Ancestors by Mapping ~~~~~ ###
 ###             Repeats with Overlapping Common Kmers    ~~~~~ ###
 ### MAIN WORKFLOW EXECUTION SCRIPT                       ~~~~~ ###
-### VERSION: 0.3.1                                       ~~~~~ ###
-### LAST EDIT: 10/06/25                                  ~~~~~ ###
+### VERSION: 0.4.0                                       ~~~~~ ###
+### LAST EDIT: 11/06/25                                  ~~~~~ ###
 ### AUTHORS: Richard Edwards 2025                        ~~~~~ ###
 ### CONTACT: https://github.com/slimsuite/shamrock      ~~~~~ ###
 ##################################################################
@@ -16,7 +16,8 @@
 # v0.2.0 : Added capacity to generate and use $GENBASE.best.txt.
 # v0.3.0 : Added simple shamrock.config file and compleasm homeologue assignment.
 # v0.3.1 : Modified the R output and added clustering of higher ploidies.
-VERSION=v0.3.1
+# v0.4.0 : Improved control and reporting of running steps. Renamed "parents" as "subgenomes".
+VERSION=v0.4.0
 
 ####################################### ::: TO DO ::: ##############################################
 # [?] : Separate out the preflight checks into preflight.exec so it can be run separately.
@@ -150,12 +151,11 @@ STEPN=0
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 STEP=ChromKMC
 STEPN=$((STEPN + 1))
-DONE=$GENBASE.$(printf "chr%02d" "$STEPN").$STEP.done
-START="[$(date)] Step $STEP"
-KEYOUT=$DONE
+DONE=$GENBASE.$(printf "%02d" "$STEPN").$STEP.done
+START="[$(date)] Step $STEPN $STEP started"
+KEYOUT=$KMCDIR/$GENBASE.$(printf "chr%02d" "$N").k${K}.kmc_suf
 if [ ! -f "$KEYOUT" ] || [ "$RUNMODE" == "force" ] || [ "$RUNMODE" == "$STEP" ]; then
 
-	#i# Run Telociraptor on Hap1
 	echo "[$(date)] Pull out each chromosome into a file and generate kmer profiles with KMC..."
 
   for i in $(seq 1 $N); do
@@ -164,6 +164,11 @@ if [ ! -f "$KEYOUT" ] || [ "$RUNMODE" == "force" ] || [ "$RUNMODE" == "$STEP" ];
     grep -A 1 ">$CHR" $SEQIN | tee $KMCDIR/$GENBASE.$CHR.fasta | grep ">"
     kmc -k$K -ci1 -fm $KMCDIR/$GENBASE.$CHR.fasta $KMCDIR/$GENBASE.$CHR.k$K $TEMPDIR
   done && echo -e "$START\n[$(date)] Step $STEPN $STEP complete" | tee $DONE | tee -a $LOG
+
+  if [ "$RUNMODE" == "next" ]; then
+  	echo "[$(date)] RUNMODE=$RUNMODE -> Exiting run." | tee -a $LOG
+  	exit 0;
+  fi
 
 else
 	echo "[$(date)] File found: $KEYOUT - skipping $STEP step" | tee -a $LOG
@@ -187,34 +192,63 @@ fi
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~ STEP 2: Generate pairwise intersects of all kmers. ~~~~ ###
 ## Goal: Generate pairwise intersects of all kmers.
-## Approach: 
-## Rationale: 
-## Method: 
-## Key inputs: 
-## Key outputs: 
+## Approach: Calculate kmers shared between chromsomes, or Compleasm gene predictions.
+## Rationale: Unless there is a lot of recombination, homeologues will have maximal shared Duplicated BUSCO genes or Kmers.
+## Method: KMC intersect of individual chromosome KMC dumps, or Compleasm run.
+##    Will bypass if $BEST is pointing to a manually constructed file.
+## Key inputs: KMC dumps (for KMC) or assembly fasta (for Compleasm)
+## Key outputs: Pairwise KMC intersect CSV, or compleasm full table TSV.
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
-STEP=$GENBASE.02-KmerIntersect
-START="[$(date)] Step $STEP"
+STEP=ChromIntersect
+STEPN=$((STEPN + 1))
+DONE=$GENBASE.$(printf "%02d" "$STEPN").$STEP.done
+START="[$(date)] Step $STEPN $STEP started"
 CSV=$GENBASE.k$K.csv
+TSV=$GENBASE.${LINEAGE}_odb12.tsv
+#i# Set $KEYOUT depending on $BEST method.
 KEYOUT=$CSV
-KEYOUTS="$KEYOUT $STEP.done"
-if [ ! -f "$KEYOUT" ]; then
+if [ "$BEST" == "compleasm" ]; then
+  KEYOUT=$TSV
+fi
+if [ -f "$BEST" ]; then
+  KEYOUT=$BEST
+fi
+KEYOUTS="$KEYOUT"
+if [ ! -f "$KEYOUT" ] || [ "$RUNMODE" == "force" ] || [ "$RUNMODE" == "$STEP" ]; then
 
-	# Execute code for step
-	echo "[$(date)] Running $STEP ..." | tee -a $LOG
-	echo chri,chrj,ktype,knum | tee $CSV
-  for i in $(seq 1 $N); do
-    CHR=$(printf "chr%02d" "$i")
-    echo chr$i "->" $CHR
-    for j in $(seq 1 $N); do
-      CHRJ=$(printf "chr%02d" "$j")
-      kmc_tools simple $KMCDIR/$GENBASE.$CHR.k$K $KMCDIR/$GENBASE.$CHRJ.k$K intersect $KMCDIR/$GENBASE.${CHR}-${CHRJ}.k$K
-      kmc_dump $KMCDIR/$GENBASE.${CHR}-${CHRJ}.k$K $KMCDIR/$GENBASE.${CHR}-${CHRJ}.k$K.txt
-      KNUM=$(wc -l $KMCDIR/$GENBASE.${CHR}-${CHRJ}.k$K.txt | awk '{print $1;}')
-      echo "$CHR,$CHRJ,kmer,$KNUM" | tee -a $CSV
-    done
-  done && echo -e "$START\n[$(date)] Step $STEP complete" | tee $STEP.done | tee -a $LOG
+  # Use compleasm to make the best file
+  if [ "$BEST" == "compleasm" ]; then
+    echo "[$(date)] Running Compleasm ..." | tee -a $LOG
+    COMPRES=$GENBASE.compleasm/${LINEAGE}_odb12/full_table.tsv
+    if [ ! -f "$COMPRES" ]; then
+      compleasm run -a $SEQIN -o $GENBASE.compleasm -t $THREADS -l $LINEAGE
+    fi
+    $SHAMDIR/compleasmbest.sh $GENBASE $COMPRES $N $BESTN
+    cp -v $GENBASE.best.txt $GENBASE.k$K.best.txt
+    cp -v $COMPRES $TSV && echo -e "$START\n[$(date)] Step $STEPN $STEP complete" | tee $DONE | tee -a $LOG
+  fi
 
+  # Else, will need kmer intersect:
+  if [ "$BEST" != "compleasm" ] && [ ! -f "$BEST" ]; then
+  	echo "[$(date)] Generating kmer intercepts ..." | tee -a $LOG
+  	echo chri,chrj,ktype,knum | tee tmp.$CSV
+    for i in $(seq 1 $N); do
+      CHR=$(printf "chr%02d" "$i")
+      echo chr$i "->" $CHR
+      for j in $(seq 1 $N); do
+        CHRJ=$(printf "chr%02d" "$j")
+        kmc_tools simple $KMCDIR/$GENBASE.$CHR.k$K $KMCDIR/$GENBASE.$CHRJ.k$K intersect $KMCDIR/$GENBASE.${CHR}-${CHRJ}.k$K
+        kmc_dump $KMCDIR/$GENBASE.${CHR}-${CHRJ}.k$K $KMCDIR/$GENBASE.${CHR}-${CHRJ}.k$K.txt
+        KNUM=$(wc -l $KMCDIR/$GENBASE.${CHR}-${CHRJ}.k$K.txt | awk '{print $1;}')
+        echo "$CHR,$CHRJ,kmer,$KNUM" | tee -a tmp.$CSV
+      done
+    done && mv tmp.$CSV $CSV && echo -e "$START\n[$(date)] Step $STEPN $STEP complete" | tee $DONE | tee -a $LOG
+  fi
+
+  if [ "$RUNMODE" == "next" ]; then
+  	echo "[$(date)] RUNMODE=$RUNMODE -> Exiting run." | tee -a $LOG
+  	exit 0;
+  fi
 
 else
 	echo "[$(date)] File found: $KEYOUT - skipping $STEP step" | tee -a $LOG
@@ -233,35 +267,26 @@ if [ "$RUNMODE" = "$STEP" ]; then
 fi
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
-### ~~~~ STEP 3: Pair up chromosomes based on all chromosome kmers. ~~~~ ###
-## Goal: Pair up chromosomes based on all chromosome kmers.
+### ~~~~ STEP 3: Pair up chromosomes based on chromosome intersects. ~~~~ ###
+## Goal: Pair up chromosomes based on all shared kmers or BUSCO genes from previous step.
 ## Approach: 
 ## Rationale: 
 ## Method: 
 ## Key inputs: 
 ## Key outputs: 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
-STEP=$GENBASE.03-PairChrom
-START="[$(date)] Step $STEP"
-KEYOUT=$GENBASE.k$K.best.txt
-KEYOUTS="$KEYOUT $STEP.done"
-if [ ! -f "$STEP.done" ]; then
+STEP=PairChrom
+STEPN=$((STEPN + 1))
+DONE=$GENBASE.$(printf "%02d" "$STEPN").$STEP.done
+START="[$(date)] Step $STEPN $STEP started"
+KEYOUT=$KMCDIR/$GENBASE.$(printf "chr%02d" "$N").alt.fasta
+KEYOUTS="$KEYOUT $GENBASE.k$K.best.txt"
+if [ ! -f "$KEYOUT" ] || [ "$RUNMODE" == "force" ] || [ "$RUNMODE" == "$STEP" ]; then
 
-	# Execute code for step
-	echo "[$(date)] Running $STEP ..." | tee -a $LOG
-  # Pair up chromosomes based on all chromosome kmers.
+	echo "[$(date)] Establishing homeologous chromosomes ..." | tee -a $LOG
   if [ -f $BEST ]; then
     echo "[$(date)] Using $BEST as paired chromosomes ..." | tee -a $LOG
     cp -v $BEST $GENBASE.k$K.best.txt
-  fi
-  # Use compleasm to make the best file
-  if [ "$BEST" == "compleasm" ]; then
-    COMPRES=$GENBASE.compleasm/${LINEAGE}_odb12/full_table.tsv
-    if [ ! -f "$COMPRES"]; then
-      compleasm run -a $SEQIN -o $GENBASE.compleasm -t $THREADS -l $LINEAGE
-    fi
-    $SHAMDIR/compleasmbest.sh $GENBASE $COMPRES $N $BESTN
-    cp -v $GENBASE.best.txt $GENBASE.k$K.best.txt
   fi
   if [ ! -f $GENBASE.k$K.best.txt ]; then
     for i in $(seq 1 $N); do
@@ -282,8 +307,13 @@ if [ ! -f "$STEP.done" ]; then
     done
   done
   wc $KMCDIR/$GENBASE.*.alt.fasta
-  rm -v $GENBASE.k$K.best.tmp && echo -e "$START\n[$(date)] Step $STEP complete" | tee $STEP.done | tee -a $LOG
+  rm -v $GENBASE.k$K.best.tmp && echo -e "$START\n[$(date)] Step $STEPN $STEP complete" | tee $DONE | tee -a $LOG
 
+  if [ "$RUNMODE" == "next" ]; then
+  	echo "[$(date)] RUNMODE=$RUNMODE -> Exiting run." | tee -a $LOG
+  	exit 0;
+  fi
+  
 else
 	echo "[$(date)] File found: $KEYOUT - skipping $STEP step" | tee -a $LOG
 fi
@@ -309,22 +339,27 @@ fi
 ## Key inputs: 
 ## Key outputs: 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
-STEP=$GENBASE.04-AlloKmers
-START="[$(date)] Step $STEP"
-KEYOUT=$STEP.done
+STEP=AlloKmers
+STEPN=$((STEPN + 1))
+DONE=$GENBASE.$(printf "%02d" "$STEPN").$STEP.done
+START="[$(date)] Step $STEPN $STEP started"
+KEYOUT=$KMCDIR/$GENBASE.$(printf "chr%02d" "$N").allok${K}.kmc_suf
 KEYOUTS="$KEYOUT"
-if [ ! -f "$KEYOUT" ]; then
+if [ ! -f "$KEYOUT" ] || [ "$RUNMODE" == "force" ] || [ "$RUNMODE" == "$STEP" ]; then
 
-	# Execute code for step
-	echo "[$(date)] Running $STEP ..." | tee -a $LOG
-	# Generate allokmers by subtraction of chromosome pairs.
+	echo "[$(date)] Generate allokmers by subtraction of chromosome pairs ..." | tee -a $LOG
   for i in $(seq 1 $N); do
     CHR=$(printf "chr%02d" "$i")
     echo chr$i "->" $CHR
     kmc -k$K -ci1 -fm $KMCDIR/$GENBASE.$CHR.alt.fasta $KMCDIR/$GENBASE.$CHR.alt.k$K $TEMPDIR
     kmc_tools simple $KMCDIR/$GENBASE.$CHR.k$K $KMCDIR/$GENBASE.$CHR.alt.k$K kmers_subtract $KMCDIR/$GENBASE.${CHR}.allok$K
-  done &&	echo -e "$START\n[$(date)] Step $STEP complete" | tee $STEP.done | tee -a $LOG
+  done && echo -e "$START\n[$(date)] Step $STEPN $STEP complete" | tee $DONE | tee -a $LOG
 
+  if [ "$RUNMODE" == "next" ]; then
+  	echo "[$(date)] RUNMODE=$RUNMODE -> Exiting run." | tee -a $LOG
+  	exit 0;
+  fi
+  
 else
 	echo "[$(date)] File found: $KEYOUT - skipping $STEP step" | tee -a $LOG
 fi
@@ -350,29 +385,37 @@ fi
 ## Key inputs: 
 ## Key outputs: 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
+STEP=AlloKmerIntersect
+STEPN=$((STEPN + 1))
+DONE=$GENBASE.$(printf "%02d" "$STEPN").$STEP.done
+START="[$(date)] Step $STEPN $STEP started"
 CSV=$GENBASE.allok$K.csv
-START="[$(date)] Step $STEP"
-STEP=$GENBASE.05-AlloKmerIntersect
 KEYOUT=$CSV
-KEYOUTS="$KEYOUT $STEP.done"
-if [ ! -f "$KEYOUT" ]; then
+KEYOUTS="$KEYOUT"
+if [ ! -f "$KEYOUT" ] || [ "$RUNMODE" == "force" ] || [ "$RUNMODE" == "$STEP" ]; then
 
-	# Execute code for step
-	echo "[$(date)] Running $STEP ..." | tee -a $LOG
-  # Generate pairwise intersects of all allokmers.
-  echo chri,chrj,ktype,knum | tee $CSV
+	echo "[$(date)] Generate pairwise intersects of all allokmers. ..." | tee -a $LOG
+  echo chri,chrj,ktype,knum | tee tmp.$CSV
   for i in $(seq 1 $N); do
     CHR=$(printf "chr%02d" "$i")
     echo chr$i "->" $CHR
     for j in $(seq 1 $N); do
       CHRJ=$(printf "chr%02d" "$j")
-      kmc_tools simple $KMCDIR/$GENBASE.$CHR.allok$K $KMCDIR/$GENBASE.$CHRJ.allok$K intersect $KMCDIR/$GENBASE.${CHR}-${CHRJ}.allok$K
-      kmc_dump $KMCDIR/$GENBASE.${CHR}-${CHRJ}.allok$K $KMCDIR/$GENBASE.${CHR}-${CHRJ}.allok$K.txt
-      KNUM=$(wc -l $KMCDIR/$GENBASE.${CHR}-${CHRJ}.allok$K.txt | awk '{print $1;}')
-      echo "$CHR,$CHRJ,allo,$KNUM" | tee -a $CSV
+      KBASE=$KMCDIR/$GENBASE.${CHR}-${CHRJ}.allok$K
+      if [ ! -f "$KBASE.txt" ] || [ "$RUNMODE" == "force" ]; then
+        kmc_tools simple $KMCDIR/$GENBASE.$CHR.allok$K $KMCDIR/$GENBASE.$CHRJ.allok$K intersect $KBASE
+        kmc_dump $KBASE $KBASE.txt
+      fi
+      KNUM=$(wc -l $KBASE.txt | awk '{print $1;}')
+      echo "$CHR,$CHRJ,allo,$KNUM" | tee -a tmp.$CSV
     done
-  done && echo -e "$START\n[$(date)] Step $STEP complete" | tee $STEP.done | tee -a $LOG
+  done && mv tmp.$CSV $CSV && echo -e "$START\n[$(date)] Step $STEPN $STEP complete" | tee $DONE | tee -a $LOG
 
+  if [ "$RUNMODE" == "next" ]; then
+  	echo "[$(date)] RUNMODE=$RUNMODE -> Exiting run." | tee -a $LOG
+  	exit 0;
+  fi
+  
 else
 	echo "[$(date)] File found: $KEYOUT - skipping $STEP step" | tee -a $LOG
 fi
@@ -398,17 +441,23 @@ fi
 ## Key inputs: 
 ## Key outputs: 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
-STEP=$GENBASE.06-Rscript
-START="[$(date)] Step $STEP"
+STEP=Rscript
+STEPN=$((STEPN + 1))
+DONE=$GENBASE.$(printf "%02d" "$STEPN").$STEP.done
+START="[$(date)] Step $STEPN $STEP started"
 KEYOUT=$GENBASE.shamrock.pdf
-KEYOUTS="$KEYOUT $GENBASE.parent.1.txt $GENBASE.parent.2.txt $STEP.done"
-if [ ! -f "$KEYOUT" ]; then
+KEYOUTS="$KEYOUT $GENBASE.parent.1.txt $GENBASE.parent.2.txt"
+if [ ! -f "$KEYOUT" ] || [ "$RUNMODE" == "force" ] || [ "$RUNMODE" == "$STEP" ]; then
 
-	# Execute code for step
 	echo "[$(date)] Running Rscript ..." | tee -a $LOG
-	Rscript $SHAMDIR/shamrock.R basefile=$GENBASE k=$K partition=$((BESTN + 1)) | tee -a $LOG
-	echo -e "$START\n[$(date)] Step $STEP complete" | tee $STEP.done | tee -a $LOG
+	Rscript $SHAMDIR/shamrock.R basefile=$GENBASE k=$K partition=$((BESTN + 1)) | tee -a $LOG \
+	  && echo -e "$START\n[$(date)] Step $STEPN $STEP complete" | tee $DONE | tee -a $LOG
 
+  if [ "$RUNMODE" == "next" ]; then
+  	echo "[$(date)] RUNMODE=$RUNMODE -> Exiting run." | tee -a $LOG
+  	exit 0;
+  fi
+  
 else
 	echo "[$(date)] File found: $KEYOUT - skipping $STEP step" | tee -a $LOG
 fi
@@ -427,32 +476,38 @@ fi
 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
 ### ~~~~ STEP 7: Make parents. ~~~~ ###
-## Goal: Compile the two parent fasta files from the Shamrock clustering.
+## Goal: Compile the two subgenome fasta files from the Shamrock clustering.
 ## Approach: 
 ## Rationale: 
 ## Method: 
 ## Key inputs: 
 ## Key outputs: 
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ###
-STEP=$GENBASE.07-Parents
-START="[$(date)] Step $STEP"
-KEYOUT=$STEP.done
+STEP=SubGenomes
+STEPN=$((STEPN + 1))
+DONE=$GENBASE.$(printf "%02d" "$STEPN").$STEP.done
+START="[$(date)] Step $STEPN $STEP started"
+KEYOUT=$GENBASE.subgenome.$((BESTN + 1)).fasta
 KEYOUTS="$KEYOUT"
-if [ ! -f "$KEYOUT" ]; then
+if [ ! -f "$KEYOUT" ] || [ "$RUNMODE" == "force" ] || [ "$RUNMODE" == "$STEP" ]; then
 
-	# Execute code for step
-	echo "[$(date)] Generating parent fasta files..." | tee -a $LOG
-	for P in 1 2; do
-	  PFILE=$GENBASE.parent.$P.fasta
+	echo "[$(date)] Generating subgenome fasta files..." | tee -a $LOG
+	for P in $(seq 1 $((BESTN + 1))); do
+	  PFILE=$GENBASE.subgenome.$P.fasta
 	  if [ -f "$PFILE" ]; then
 	    rm $PFILE
 	  fi
-	  for CHR in $(cat $GENBASE.parent.$P.txt); do
+	  for CHR in $(cat $GENBASE.subgenome.$P.txt); do
 	    cat $KMCDIR/$GENBASE.$CHR.fasta >> $PFILE
 	  done
 	  wc $PFILE
-	done && echo -e "$START\n[$(date)] Step $STEP complete" | tee $STEP.done | tee -a $LOG
+	done && echo -e "$START\n[$(date)] Step $STEPN $STEP complete" | tee $DONE | tee -a $LOG
 
+  if [ "$RUNMODE" == "next" ]; then
+  	echo "[$(date)] RUNMODE=$RUNMODE -> Exiting run." | tee -a $LOG
+  	exit 0;
+  fi
+  
 else
 	echo "[$(date)] File found: $KEYOUT - skipping $STEP step" | tee -a $LOG
 fi
