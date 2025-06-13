@@ -446,7 +446,7 @@ STEPN=$((STEPN + 1))
 DONE=$GENBASE.$(printf "%02d" "$STEPN").$STEP.done
 START="[$(date)] Step $STEPN $STEP started"
 KEYOUT=$GENBASE.shamrock.pdf
-KEYOUTS="$KEYOUT $GENBASE.parent.1.txt $GENBASE.parent.2.txt"
+KEYOUTS="$KEYOUT $GENBASE.subgenome.1.txt $GENBASE.subgenome.2.txt"
 if [ ! -f "$KEYOUT" ] || [ "$RUNMODE" == "force" ] || [ "$RUNMODE" == "$STEP" ]; then
 
 	echo "[$(date)] Running Rscript ..." | tee -a $LOG
