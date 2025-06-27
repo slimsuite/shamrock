@@ -18,6 +18,14 @@ kmer-based separation of allotetraploid parental subgenomes. This readme was wri
 SHAMROCK is a kmer-based tool for disentangling homeologous chromosomes in allotetraploid genomes by subtracting shared sequence content, 
 identifying "allokmers" unique to each homoelogue, and clustering chromosomes into subgenomes based on shared allokmer content.
 
+Please note that SHAMROCK is a passion project, coded up for a bit of fun after the Irish Darwin Tree of Life meeting at UCD in June 2025. 
+There are other tools out there that might do a better job and might even use the same approach.
+
+Others you might want to try out include:
+
+* [SubPhaser](https://github.com/zhangrengang/SubPhaser)
+* [KBSM](https://github.com/amsession/Kmer-based-Subgenome-Mapping)
+* [PolyCRACKER](https://bitbucket.org/berkeleylab/jgi-polycracker/src/master/)
 
 ## Installation and setup
 

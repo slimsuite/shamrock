@@ -22,13 +22,14 @@ VERSION=v0.4.0
 ####################################### ::: TO DO ::: ##############################################
 # [?] : Separate out the preflight checks into preflight.exec so it can be run separately.
 # [Y] : Concatenate the parents into two files.
-# [ ] : Consider running Compleasm and ChromSyn on the two sets of parents.
+# [ ] : Consider running Compleasm, BUSCOMP and ChromSyn on the two sets of parents.
 # [ ] : Add a check that the sequences are actually found, i.e. the formatting is correct.
 # [Y] : Make it easier to use an existing *.best.txt file.
 # [Y] : Add a compleasm-based pairing of chromosomes to replace the kmer-based approach.
 # [Y] : Add a simple shamrock.config file to easily over-ride some of the default settings without argv handling.
 # [ ] : Add option to look at higher ploidy. (Can do this for homeologues)
 # [ ] : Add option to pre-screen for polyploidy using compleasm and a duplication threshold. (Move compleasm step higher.)
+# [ ] : Output the homeologue sets in the right format for SubPhaser: https://github.com/zhangrengang/SubPhaser.
 
 ####################################### ::: SETUP ::: ##############################################
 
