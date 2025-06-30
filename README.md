@@ -104,10 +104,24 @@ you can use the `chromformat.sh` script to download and reformat the data:
 chromformat.sh <GENBASE> <BIOPROJECT>
 ```
 
+Or, you can use the NCBI genome accession number (`GCA*` or `GCF*`):
+
+```
+chromformat.sh <GENBASE> <ASSEMBLYID>
+```
+
+**NOTE:** If the BioProject contains multiple assemblies, it is safer to use the Assembly ID.
+
 For example, for the shamrock:
 
 ```
 ~/code/shamrock/chromformat.sh drTriDubi3 PRJEB62713
+```
+
+or
+
+```
+~/code/shamrock/chromformat.sh drTriDubi3 GCA_951804385.1
 ```
 
 For other species, some additional formatting may be required. 
@@ -121,6 +135,8 @@ unpigz -v CAMTDV01.fasta.gz
 sed 's/contg: chr_/chromosome: /' CAMTDV01.fasta > ScaAtr.fasta 
 ~/code/shamrock/chromformat.sh ScaAtr
 ```
+
+**NOTE:** It should not matter if the initial assembly prior to running `chromformat.sh` has the chromosomes named, but it might make it harder to track the sequences back later after partitioning. Either way, the Telociraptor map file will have the mapping onto the original sequence names.
 
 ### Primary outputs
 
