@@ -14,7 +14,14 @@ SEQIN=$GENBASE.fasta
 # ~~~~~~ Shamrock example ~~~~~~~~
 # Download from ENA
 if [ ! -z "$2" ] && [ ! -f "$SEQIN" ]; then
-  wget "https://www.ebi.ac.uk/ena/browser/api/fasta/links/study?accession=$2&result=sequence" -O $SEQIN
+  if [[ "$2" == G* ]]; then
+    echo "Downloading $2 as assembly..."
+    wget "https://www.ebi.ac.uk/ena/browser/api/fasta/$2?download=true&gzip=true" -O $SEQIN.gz
+    unpigz $SEQIN.gz
+  else
+    echo "Downloading $2 as bioproject..."
+    wget "https://www.ebi.ac.uk/ena/browser/api/fasta/links/study?accession=$2&result=sequence" -O $SEQIN
+  fi
 fi
 
 if [ ! -f "$SEQIN" ]; then
